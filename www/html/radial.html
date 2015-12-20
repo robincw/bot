@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+body {
+  background: #000;
+  color: #fff;
+  font: 10px sans-serif;
+}
+.frame {
+  fill: none;
+  stroke: #999;
+}
+
+.axis text {
+  font: 10px sans-serif;
+  fill: #999;
+}
+
+.axis line,
+.axis circle {
+  fill: none;
+  stroke: #777;
+  stroke-dasharray: 1,4;
+}
+
+.axis :last-of-type circle {
+  stroke: #333;
+  stroke-dasharray: none;
+}
+
+.line {
+  fill: none;
+  stroke: #4a8;
+  stroke-width: 1.5px;
+}
+.oldline {
+  fill: none;
+  stroke: #48a;
+  stroke-width: 1px;
+}
+
+</style>
+<body>
+<script src="/js/d3.v3.min.js"></script>
+<script src="/js/reconnecting-websocket.js"></script>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+<script>
+/*
+var data = d3.range(0, 2 * Math.PI, .01).map(function(t) {
+  return [t, Math.sin(2 * t) * Math.cos(2 * t)];
+});
+*/ 
+function mean(numbers) {
+    // mean of [3, 5, 4, 4, 1, 1, 2, 3] is 2.875
+    var total = 0,
+        i;
+    for (i = 0; i < numbers.length; i += 1) {
+        total += numbers[i];
+    }
+    return total / numbers.length;
+}
+function median(numbers) {
+    // median of [3, 5, 4, 4, 1, 1, 2, 3] = 3
+    var median = 0,
+        numsLen = numbers.length;
+    numbers.sort();
+    if (numsLen % 2 === 0) { // is even
+        // average of two middle numbers
+        median = (numbers[numsLen / 2 - 1] + numbers[numsLen / 2]) / 2;
+    } else { // is odd
+        // middle number only
+        median = numbers[(numsLen - 1) / 2];
+    }
+    return median;
+}
+
+var data = d3.range(0,270,1).map(function(t) { return [t, []]; });
+
+var width = 960,
+    height = 700,
+    radius = Math.min(width, height) / 2 - 30;
+
+var r = d3.scale.linear()
+    .domain([0, 150])
+    .range([0, radius]);
+
+var line = d3.svg.line.radial()
+    .defined(function(d) { return d[1].length>0; })
+    .radius(function(d) { return r(mean(d[1])); })
+    .angle(function(d) { return ((d[0]-45)*(Math.PI/180)); });
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height)
+  .append("g")
+    .attr("transform", "translate(" + width / 2 + "," + height / 2 + ") rotate(-90)");
+
+var gr = svg.append("g")
+    .attr("class", "r axis")
+  .selectAll("g")
+    .data(r.ticks(15).slice(1))
+  .enter().append("g");
+
+gr.append("circle")
+    .attr("r", r);
+
+gr.append("text")
+    .attr("y", function(d) { return -r(d) - 4; })
+    .attr("transform", "rotate(90) translate(10,10)")
+    .style("text-anchor", "middle")
+    .text(function(d) { return d; });
+
+var ga = svg.append("g")
+    .attr("class", "a axis")
+  .selectAll("g")
+    .data(d3.range(0, 360, 30))
+  .enter().append("g")
+    .attr("transform", function(d) { return "rotate(" + d + ")"; });
+
+ga.append("line")
+    .attr("x2", radius);
+
+ga.append("text")
+    .attr("x", radius + 6)
+    .attr("dy", ".35em")
+    .style("text-anchor", function(d) { return d < 270 && d > 90 ? "end" : null; })
+    .attr("transform", function(d) { return d < 270 && d > 90 ? "rotate(180 " + (radius + 6) + ",0)" : null; })
+    .text(function(d) { return d + "°"; });
+
+//====================================
+
+var irdar = [];
+var stopped  = true;
+var waypoint = 0;
+var dspeed = 0.02;
+var aspeed = 0.02;
+var m1prev = "-";
+var m2prev = "-";
+
+
+$(function(){
+  var ws;
+
+  var draw = function() {
+    if(d3.select("#wp"+waypoint)[0][0]==null) {
+      irdar[waypoint]  = svg.append("path")
+                          .datum(data)
+                          .attr("class", "line")
+                          .attr("id", "wp"+waypoint)
+                          .attr("d", line);
+    } else {
+      irdar[waypoint]
+        .datum(data)
+        .attr("class", "line")
+        .attr("d", line);
+    }
+  }
+
+  draw();
+
+  var logger = function(msg){
+    var msgparts = $.parseJSON(msg);
+
+    if(msgparts.motors != undefined) {
+      if(m1prev!="-" || m2prev!="-") {
+        // moved
+        var dist  = 0;
+        var angle = 0;
+        if(m1prev=="^" && m2prev=="^") dist  = dspeed * -msgparts.t;
+        if(m1prev=="v" && m2prev=="v") dist  = dspeed * msgparts.t;
+        if(m1prev=="^" && m2prev=="v") angle = aspeed * msgparts.t;
+        if(m1prev=="v" && m2prev=="^") angle = aspeed * -msgparts.t;
+
+        waypoint ++;
+        for(var wp=0; wp<waypoint; wp++) {
+          var history = (irdar[wp].attr("transform")==null) ? "" : " " + irdar[wp].attr("transform");
+          irdar[wp]
+            .attr("class", "oldline")
+            .attr("transform", "rotate("+angle+") translate("+dist+",0)" + history);
+        }
+        data = d3.range(0,270,1).map(function(t) { return [t, []]; });
+      } else {
+
+      }
+      m1prev = msgparts.motors.m1;
+      m2prev = msgparts.motors.m2;
+    }
+
+    if(msgparts.rangers != undefined) {
+      for(var r=0; r<msgparts.rangers.length; r++) {
+        //update(msgparts.rangers[r].f, msgparts.rangers[r].d);
+        if(data[msgparts.rangers[r].f]==undefined) data[msgparts.rangers[r].f] = [msgparts.rangers[r].f, []];
+        data[msgparts.rangers[r].f][1].push(msgparts.rangers[r].d);
+      }
+      draw();
+    }
+    //$("#log").html($("#log").html() + "<br />" + msg);
+    //$("#log").animate({ scrollTop: $('#log')[0].scrollHeight}, 100);
+    //      $('#log').scrollTop($('#log')[0].scrollHeight);
+  }
+
+  var sender = function(k) {
+    ws.send(k);
+  }
+
+  ws = new ReconnectingWebSocket("ws://robincw.noip.me:12308/ws");
+  ws.onmessage = function(evt) {
+    logger(evt.data);
+  };
+  ws.onclose = function(evt) { 
+    $("#log").text("Connection was closed..."); 
+    $("#thebutton #msg").prop('disabled', true);
+  };
+  ws.onopen = function(evt) { $("#log").text("Opening socket..."); };
+
+  var keysdown = {}
+  $(window).keydown(function(event) {
+    var k;
+    switch(event.which) {
+      case 189:
+        k='-';
+        break;
+      case 187:
+        k='=';
+        break;
+      default:
+        k=String.fromCharCode(event.which).toLowerCase();
+    }
+    if(keysdown[event.which] == null && k != 's') {
+      keysdown[event.which] = true;
+      sender(k);
+    }
+  });
+  $(window).keyup(function(event) {
+    keysdown[event.which] = null;
+    sender('s');
+  });
+
+});
+</script>
+<h1>Map making robot</h1>
+<table style="position: fixed; top: 0px; left: 0px; width: 64px; height: 64px;" cellspacing: "0" cellpadding: "0"><tr>
+  <td style="width: 20px; height: 20px" title="Scan 1 degree left">Q</td>
+  <td style="width: 20px; height: 20px; border: solid 1px #fff;" title="Drive forwards">W</td>
+  <td style="width: 20px; height: 20px" title="Scan 1 degree right">E</td>
+  <td style="width: 20px; height: 20px" id="dspeed">0.001</td>
+</tr><tr>
+  <td style="width: 20px; height: 20px; border: solid 1px #fff;" title="Turn left">A</td>
+  <td style="width: 20px; height: 20px; border: solid 1px #fff;" title="Stop and scan">S</td>
+  <td style="width: 20px; height: 20px; border: solid 1px #fff;" title="Turn right">D</td>
+  <td style="width: 20px; height: 20px; border: solid 1px #fff;" title="Full scan">F</td>
+</tr><tr>
+  <td style="width: 20px; height: 20px" title="Scan 10 degrees left">Z</td>
+  <td style="width: 20px; height: 20px; border: solid 1px #fff;" title="Drive backwards">X</td>
+  <td style="width: 20px; height: 20px" title="Scan 10 degrees right">C</td>
+  <td style="width: 20px; height: 20px" id="aspeed">0.001</td>
+</tr>
+</table>
