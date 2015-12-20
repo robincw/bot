@@ -1,0 +1,4 @@
+#!/bin/bash
+cd ~/i2c
+ino build && ino upload && minicom -b 9600 -o -D /dev/ttyUSB0
+
