@@ -19,7 +19,6 @@ const int dataPin = 8;
 int fullWheelTurn = 2048;
 const float wheelDia = 6.5; //cm
 const float wheelSpan = 19.5; //cm
-const float pi = 3.14159265359;
 
 // Step mode and delay
 int stepMode  = 1; // 0 for half steps, 1 for full
