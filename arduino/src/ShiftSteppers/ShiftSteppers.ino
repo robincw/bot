@@ -19,6 +19,7 @@ const int dataPin = 8;
 int fullWheelTurn = 2048;
 const float wheelDia = 6.5; //cm
 const float wheelSpan = 19.5; //cm
+const float pi = 3.14159265359;
 
 // Step mode and delay
 int stepMode  = 1; // 0 for half steps, 1 for full
@@ -53,11 +54,70 @@ void setup() {
     Serial.begin(9600);
   }
   
-  for(int m=0; m<1; m++) {
-    nextMoves[0].enqueue(fullWheelTurn);
-    nextMoves[1].enqueue(fullWheelTurn);
-    nextMoves[0].enqueue(ninetyTurn);
-    nextMoves[1].enqueue(-ninetyTurn);
+  fwd(10);
+  left(90);
+  
+}
+
+int cmToSteps(int cm) {
+  return fullWheelTurn * cm / (wheelDia * pi);
+}
+int angleToSteps(int angle) {
+  return (wheelSpan / wheelDia * fullWheelTurn) / (360 / angle);
+}
+
+void fwd(int cm) {
+  int steps = cmToSteps(cm);
+  nextMoves[0].enqueue(steps);
+  nextMoves[1].enqueue(steps);
+}
+void rev(int cm) {
+  int steps = cmToSteps(cm);
+  nextMoves[0].enqueue(-steps);
+  nextMoves[1].enqueue(-steps);
+}
+void left(int angle) {
+  int steps = angleToSteps(angle);
+  nextMoves[0].enqueue(-steps);
+  nextMoves[1].enqueue(steps);
+}
+void right(int angle) {
+  int steps = angleToSteps(angle);
+  nextMoves[0].enqueue(steps);
+  nextMoves[1].enqueue(-steps);
+}
+
+void drive() {
+  int datashift = i*4;
+  Serial.print(datashift);
+  Serial.print(":");
+  stepperPos[i] = abs(stepsRemaining[i] % (stepMode==0 ? 8 : 4));
+  
+  if(stepsRemaining[i]==0 && nextMoves[i].count()>0) {
+    // finished moving stepper i, get next move
+    stepsRemaining[i] = nextMoves[i].dequeue();
+    // stepper position might be too wrong now so calculate the offset
+    // TODO: use stepperPos[i] - (stepsRemaining[i] % 8);
+    data = data + (0 <<datashift);
+    
+  } else if(stepsRemaining[i]>0) {
+    // reverse direction
+    stepsRemaining[i] += -1;
+    if(stepMode==0) {
+      data = data + (halfSteps[stepperPos[i]] <<datashift);
+    } else {
+      data = data + (fullSteps[stepperPos[i]] <<datashift);
+    }
+    
+  } else if(stepsRemaining[i]<0) {
+    // forward direction
+    stepsRemaining[i] += 1;
+    if(stepMode==0) {
+      data = data + (halfSteps[7-stepperPos[i]] <<datashift);
+    } else {
+      data = data + (fullSteps[3-stepperPos[i]] <<datashift);
+    }
+    
   }
 }
 
@@ -69,43 +129,13 @@ void loop() {
     //if(random(1000)==42) pause = !pause;
     
     if(!pause) {
-      int datashift = i*4;
-      Serial.print(datashift);
-      Serial.print(":");
-      stepperPos[i] = abs(stepsRemaining[i] % (stepMode==0 ? 8 : 4));
-      
-      // Get next moves
-      if(false && nextMoves[i].count()<5) {
-        int n = random(-1024,1024);
-        //Serial.println(nextMoves[i].count());
-        nextMoves[i].enqueue(n);
-      }
-      if(stepsRemaining[i]==0 && nextMoves[i].count()>0) {
-        // finished moving stepper i, get next move
-        stepsRemaining[i] = nextMoves[i].dequeue();
-        // stepper position might be too wrong now so calculate the offset
-        // TODO: use stepperPos[i] - (stepsRemaining[i] % 8);
-        data = data + (0 <<datashift);
-        
-      } else if(stepsRemaining[i]>0) {
-        // reverse direction
-        stepsRemaining[i] += -1;
-        if(stepMode==0) {
-          data = data + (halfSteps[stepperPos[i]] <<datashift);
-        } else {
-          data = data + (fullSteps[stepperPos[i]] <<datashift);
-        }
-        
-      } else if(stepsRemaining[i]<0) {
-        // forward direction
-        stepsRemaining[i] += 1;
-        if(stepMode==0) {
-          data = data + (halfSteps[7-stepperPos[i]] <<datashift);
-        } else {
-          data = data + (fullSteps[3-stepperPos[i]] <<datashift);
-        }
-        
-      }
+      drive();
+    }
+    // Get next moves
+    if(false && nextMoves[i].count()<5) {
+      int n = random(-1024,1024);
+      //Serial.println(nextMoves[i].count());
+      nextMoves[i].enqueue(n);
     }
     Serial.print(stepsRemaining[i]);
     Serial.print(", ");
