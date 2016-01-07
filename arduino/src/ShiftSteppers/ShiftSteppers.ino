@@ -87,7 +87,7 @@ void right(int angle) {
   nextMoves[1].enqueue(-steps);
 }
 
-void drive() {
+byte drive(int i) {
   int datashift = i*4;
   Serial.print(datashift);
   Serial.print(":");
@@ -119,6 +119,7 @@ void drive() {
     }
     
   }
+  return data;
 }
 
 void loop() {  
@@ -129,7 +130,7 @@ void loop() {
     //if(random(1000)==42) pause = !pause;
     
     if(!pause) {
-      drive();
+      data = drive(i);
     }
     // Get next moves
     if(false && nextMoves[i].count()<5) {
