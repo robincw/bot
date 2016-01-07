@@ -8,21 +8,27 @@
 
  */
 // LED
-int ledPin = 13;
+const int ledPin = 13;
 //Pin connected to ST_CP of 74HC595
-int latchPin = 7;
+const int latchPin = 7;
 //Pin connected to SH_CP of 74HC595
-int clockPin = 12;
+const int clockPin = 12;
 ////Pin connected to DS of 74HC595
-int dataPin = 8;
+const int dataPin = 8;
+//Steps per wheel revolution
+int fullWheelTurn = 2048;
+const float wheelDia = 6.5; //cm
+const float wheelSpan = 19.5; //cm
+const float pi = 3.14159265359;
+
 // Step mode and delay
 int stepMode  = 1; // 0 for half steps, 1 for full
 int stepDelay = 3; // minimum is 3, higher has more torque
 // 8 bits of data to send to the shift register
 byte data;
 // The sequence of steps to rotate the stepper motors
-byte halfSteps[8] = { 0x01, 0x03, 0x02, 0x06, 0x04, 0x0c, 0x08, 0x09 };
-byte fullSteps[4] = {       0x03,       0x06,       0x0c,       0x09 };
+const byte halfSteps[8] = { 0x01, 0x03, 0x02, 0x06, 0x04, 0x0c, 0x08, 0x09 };
+const byte fullSteps[4] = {       0x03,       0x06,       0x0c,       0x09 };
 // The index in halfSteps of the current position of each motor
 int stepperPos[2] = {0,0};
 // The number of steps remaining (+/-) for both motors
@@ -37,15 +43,22 @@ void setup() {
   pinMode(latchPin, OUTPUT);
   pinMode(clockPin, OUTPUT);
   pinMode(dataPin, OUTPUT);
+  
+  //maneuvers
+  fullWheelTurn = fullWheelTurn * (2 - stepMode);
+  int ninetyTurn = (wheelSpan / wheelDia * fullWheelTurn)/4;
+  
   //pause until serial is connected
-  while(!Serial);
-  Serial.begin(9600);
+  if(false) {
+    while(!Serial);
+    Serial.begin(9600);
+  }
+  
   for(int m=0; m<1; m++) {
-    nextMoves[0].enqueue(1024);
-    nextMoves[1].enqueue(512);
-    
-    nextMoves[1].enqueue(-512);
-    nextMoves[0].enqueue(-1024);
+    nextMoves[0].enqueue(fullWheelTurn);
+    nextMoves[1].enqueue(fullWheelTurn);
+    nextMoves[0].enqueue(ninetyTurn);
+    nextMoves[1].enqueue(-ninetyTurn);
   }
 }
 
