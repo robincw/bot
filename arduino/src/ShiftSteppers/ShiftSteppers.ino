@@ -22,7 +22,7 @@ const float wheelSpan = 19.5; //cm
 const float pi = 3.14159265359;
 
 // Step mode and delay
-int stepMode  = 1; // 0 for half steps, 1 for full
+int stepMode  = 1; // 0 for half steps (8 steps per motor revolution), 1 for full steps (4 steps per motor revolution)
 int stepDelay = 3; // minimum is 3, higher has more torque
 // 8 bits of data to send to the shift register
 byte data;
@@ -44,9 +44,8 @@ void setup() {
   pinMode(clockPin, OUTPUT);
   pinMode(dataPin, OUTPUT);
   
-  //maneuvers
+  //adjust steps per wheel turn for stepping mode
   fullWheelTurn = fullWheelTurn * (2 - stepMode);
-  int ninetyTurn = (wheelSpan / wheelDia * fullWheelTurn)/4;
   
   //pause until serial is connected
   if(false) {
@@ -55,8 +54,10 @@ void setup() {
   }
   
   fwd(10);
-  left(90);
-  
+  left(60);
+  back(10);
+  left(60);
+  fwd(10);
 }
 
 int cmToSteps(int cm) {
@@ -71,7 +72,7 @@ void fwd(int cm) {
   nextMoves[0].enqueue(steps);
   nextMoves[1].enqueue(steps);
 }
-void rev(int cm) {
+void back(int cm) {
   int steps = cmToSteps(cm);
   nextMoves[0].enqueue(-steps);
   nextMoves[1].enqueue(-steps);
@@ -86,16 +87,26 @@ void right(int angle) {
   nextMoves[0].enqueue(steps);
   nextMoves[1].enqueue(-steps);
 }
+void stop() {
+  stepsRemaining[0] = 0;
+  stepsRemaining[1] = 0;
+  while(!nextMoves[0].isEmpty()) {
+    nextMoves[0].dequeue();
+  }
+  while(!nextMoves[1].isEmpty()) {
+    nextMoves[1].dequeue();
+  }
+}
 
-byte drive(int i) {
+void consumeMotorData(int i) {
   int datashift = i*4;
-  Serial.print(datashift);
-  Serial.print(":");
   stepperPos[i] = abs(stepsRemaining[i] % (stepMode==0 ? 8 : 4));
   
-  if(stepsRemaining[i]==0 && nextMoves[i].count()>0) {
-    // finished moving stepper i, get next move
-    stepsRemaining[i] = nextMoves[i].dequeue();
+  if(stepsRemaining[i]==0) {
+    if(nextMoves[i].count()>0) {
+      // finished moving stepper i, get next move
+      stepsRemaining[i] = nextMoves[i].dequeue();
+    }
     // stepper position might be too wrong now so calculate the offset
     // TODO: use stepperPos[i] - (stepsRemaining[i] % 8);
     data = data + (0 <<datashift);
@@ -119,44 +130,82 @@ byte drive(int i) {
     }
     
   }
-  return data;
 }
 
-void loop() {  
+void drive() {
   data = 0x00;
-  Serial.print("[");
-  for(int i=0; i<2; i++) {
-    // maybe toggle pause
-    //if(random(1000)==42) pause = !pause;
-    
-    if(!pause) {
-      data = drive(i);
-    }
-    // Get next moves
-    if(false && nextMoves[i].count()<5) {
-      int n = random(-1024,1024);
-      //Serial.println(nextMoves[i].count());
-      nextMoves[i].enqueue(n);
-    }
-    Serial.print(stepsRemaining[i]);
-    Serial.print(", ");
-    Serial.print("0x"); if( data < 0x10){ Serial.print("0");} Serial.print(data, HEX);
-    Serial.print(", ");
-  
+
+  if(!pause) {
+    // populate the data to send to the shift register
+    consumeMotorData(0);
+    consumeMotorData(1);
   }
-  Serial.print("0x"); if( data < 0x10){ Serial.print("0");} Serial.print(data, HEX);
-  Serial.println("]");
   
   digitalWrite(latchPin, 0);
   shiftOut(dataPin, clockPin, data);
   digitalWrite(latchPin, 1);
-  
+
   delay(stepDelay);
 }
 
+void readCommands() {
+  char cmd = 's';
+  int  val = 0;
+  while(Serial.available() > 0) {
+    // read the incoming byte:
+    inByte = Serial.read();
+    switch (inByte) {
+      case 'f':
+      case 'b':
+      case 'l':
+      case 'r':
+        // these movement commands are followed by an int
+        val = Serial.parseInt();
+      case 's':
+      case 'p':
+      case 'g':
+        // remember the command
+        cmd = inByte;
+        break;
+      case ';':
+        // execute the command when terminated with ;
+        switch(cmd) {
+          case 'f':
+            fwd(val);
+            break;
+          case 'b':
+            back(val);
+            break;
+          case 'l':
+            left(val);
+            break;
+          case 'r':
+            right(val);
+            break;
+          case 's':
+            stop();
+            break;
+          case 'p':
+            pause = true;
+            break;
+          case 'g':
+            pause = false;
+            break;
+        }
+        break;
+    }
+  }
+}
 
+void loop() {
+  // Move motors
+  drive();
+  
+  // Get next moves
+  readCommands();
 
-// the heart of the program
+}
+
 void shiftOut(int myDataPin, int myClockPin, byte myDataOut) {
   // This shifts 8 bits out MSB first, 
   //on the rising edge of the clock,
