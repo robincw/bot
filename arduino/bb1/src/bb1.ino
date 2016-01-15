@@ -48,10 +48,11 @@ void setup() {
   fullWheelTurn = fullWheelTurn * (2 - stepMode);
   
   //pause until serial is connected
-  if(false) {
+  //if(false) {
     while(!Serial);
     Serial.begin(9600);
-  }
+    Serial.println("BoxBot1");
+  //}
   
   fwd(10);
   left(60);
@@ -71,21 +72,41 @@ void fwd(int cm) {
   int steps = cmToSteps(cm);
   nextMoves[0].enqueue(steps);
   nextMoves[1].enqueue(steps);
+  if(Serial) {
+    Serial.print("f");
+    Serial.print(cm);
+    Serial.println(";");
+  }
 }
 void back(int cm) {
   int steps = cmToSteps(cm);
   nextMoves[0].enqueue(-steps);
   nextMoves[1].enqueue(-steps);
+  if(Serial) {
+    Serial.print("b");
+    Serial.print(cm);
+    Serial.println(";");
+  }
 }
 void left(int angle) {
   int steps = angleToSteps(angle);
   nextMoves[0].enqueue(-steps);
   nextMoves[1].enqueue(steps);
+  if(Serial) {
+    Serial.print("l");
+    Serial.print(angle);
+    Serial.println(";");
+  }
 }
 void right(int angle) {
   int steps = angleToSteps(angle);
   nextMoves[0].enqueue(steps);
   nextMoves[1].enqueue(-steps);
+  if(Serial) {
+    Serial.print("r");
+    Serial.print(angle);
+    Serial.println(";");
+  }
 }
 void stop() {
   stepsRemaining[0] = 0;
@@ -95,6 +116,9 @@ void stop() {
   }
   while(!nextMoves[1].isEmpty()) {
     nextMoves[1].dequeue();
+  }
+  if(Serial) {
+    Serial.println("s;");
   }
 }
 
@@ -149,11 +173,13 @@ void drive() {
 }
 
 void readCommands() {
+  char inByte = ' ';
   char cmd = 's';
   int  val = 0;
   while(Serial.available() > 0) {
     // read the incoming byte:
     inByte = Serial.read();
+    Serial.print(inByte);
     switch (inByte) {
       case 'f':
       case 'b':
@@ -161,6 +187,7 @@ void readCommands() {
       case 'r':
         // these movement commands are followed by an int
         val = Serial.parseInt();
+        Serial.print(val);
       case 's':
       case 'p':
       case 'g':
@@ -168,6 +195,7 @@ void readCommands() {
         cmd = inByte;
         break;
       case ';':
+         Serial.println(inByte);
         // execute the command when terminated with ;
         switch(cmd) {
           case 'f':
