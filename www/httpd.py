@@ -11,8 +11,11 @@ import time
 import multiprocessing
 import serialProcess
  
-define("port", default=12308, help="run on the given port", type=int)
- 
+define("port", default=12308, help="Run www server on the given port", type=int)
+define("serialPort", default="/dev/ttyACM0", help="Send commands to Arduino on this serial port")
+define("serialBaud", default=9600, help="Set serial speed to this baud", type=int)
+define("docroot", default="/home/pi/git/bot/www/html/", help="www document root")
+
 clients = []
 
  
@@ -20,7 +23,7 @@ class IndexHandler(tornado.web.RequestHandler):
     def get(self):
         self.set_header("Cache-control", "no-cache")
         self.set_header("Etag", "")
-        self.render('radial.html')
+        self.render('index.html')
         
 class StaticFileNoHash(tornado.web.StaticFileHandler):
 
@@ -57,23 +60,26 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
  
 def main():
  
+    tornado.options.parse_command_line()
+
     taskQ = multiprocessing.Queue()
     resultQ = multiprocessing.Queue()
  
-    sp = serialProcess.SerialProcess(taskQ, resultQ)
+    sp = serialProcess.SerialProcess(options.serialPort, options.serialBaud, taskQ, resultQ)
     sp.daemon = True
     sp.start()
  
-    tornado.options.parse_command_line()
     app = tornado.web.Application(
         handlers=[
             (r"/ws", WebSocketHandler),
-            (r'/(.*)', StaticFileNoHash, {'path': '/home/pi/www/'})
+            (r'/(.*)', StaticFileNoHash, {'path': options.docroot})
         ], queue=taskQ
     )
     httpServer = tornado.httpserver.HTTPServer(app)
     httpServer.listen(options.port)
     print "Listening on port:", options.port
+    print "Arduino on serial port:", options.serialPort
+    print "Serial port speed:", options.serialBaud
     #tornado.ioloop.IOLoop.instance().start()
  
     def checkResults():

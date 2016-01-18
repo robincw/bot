@@ -4,12 +4,13 @@ import multiprocessing
  
 class SerialProcess(multiprocessing.Process):
  
-    def __init__(self, taskQ, resultQ):
+    def __init__(self, serialPort, serialBaud, taskQ, resultQ):
         multiprocessing.Process.__init__(self)
         self.taskQ = taskQ
         self.resultQ = resultQ
-        self.usbPort = '/dev/ttyUSB0'
-        self.sp = serial.Serial(self.usbPort, 115200, timeout=1)
+        self.serialPort = serialPort
+        self.serialBaud = serialBaud
+        self.sp = serial.Serial(self.serialPort, self.serialBaud, timeout=1)
  
     def close(self):
         self.sp.close()
