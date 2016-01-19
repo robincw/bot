@@ -63,106 +63,57 @@
 
     </style>
     
-    <script src="/js/d3.v3.min.js" charset="utf-8"></script>
+    <script src="/js/d3.min.js" charset="utf-8"></script>
     <script src="/js/radialBarChart.js"></script>
     <script src="/js/reconnecting-websocket.js"></script>
     <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
     <script>
-      $(function(){
-var data = null;
-var keys = [];
-for(var a=135; a<360; a++) keys.push(''+a);
-for(var a=0;   a<135; a++) keys.push(''+a);
+      $(function() {
+        var ws = new ReconnectingWebSocket("ws://localhost:8000/ws");
 
-function initData() {
-  data = [{data: {}}];
-  for(var i=0; i<keys.length; i++)
-    data[0].data[keys[i]] = 0;
-  d3.select('#chart')
-    .datum(data)
-    .call(chart);
-};
-
-function update(a, d) {
-  if(false && stopped) {
-	data[0].data[''+a]=((data[0].data[''+(a-1)]==null ? parseInt(d) : data[0].data[''+(a-1)]) + 
-                          (data[0].data[''+(a+1)]==null ? parseInt(d) : data[0].data[''+(a+1)]) + 
-                           data[0].data[''+a] + (3*parseInt(d)))/6;
-  } else {
-        data[0].data[''+a] = parseInt(d);
-  }
-
-  d3.select('#chart')
-    .datum(data)
-    .call(chart);
-}
-
-var chart = radialBarChart()
-  .barHeight(350)
-  .reverseLayerOrder(true)
-  .capitalizeLabels(true)
-  .barColors(['#88ddbb','#88bbdd'])
-  .domain([0,100])
-  .tickValues([20,30,40,50,60,70,80,90,100,110,120,130,140,150])
-  .tickCircleValues([10,20,30,40,50,60,70,80,90,100,110,120,130,140])
-  .transitionDuration(0);
-
-initData();
-
-    var ws;
-    var logger = function(msg){
-	  var msgparts = $.parseJSON(msg);
-	  if(msgparts.rangers != undefined) 
-	    for(var r=0; r<msgparts.rangers.length; r++) {
-	  	update(msgparts.rangers[r].face, msgparts.rangers[r].dist);
-	    }
-
-	  $("#log").html($("#log").html() + "<br />" + msg);
-	  //$("#log").animate({ scrollTop: $('#log')[0].scrollHeight}, 100);
+        var log = function(msg){
+          $("#log").html($("#log").html() + "<br />" + msg);
           $('#log').scrollTop($('#log')[0].scrollHeight);
         }
-
-        var stopped = true;
-	var sender = function(k) {
-          stopped = (k=='s'||k=='q'||k=='e');
-	  ws.send(k);
+        var send = function(msg) {
+          ws.send(msg);
         }
 
-        ws = new ReconnectingWebSocket("ws://robincw.noip.me:12308/ws");
         ws.onmessage = function(evt) {
-
-          logger(evt.data);
+          log('&lt;&nbsp;'+evt.data);
         };
         ws.onclose = function(evt) { 
-          $("#log").text("Connection was closed..."); 
+          log("Connection was closed..."); 
           $("#thebutton #msg").prop('disabled', true);
         };
-        ws.onopen = function(evt) { $("#log").text("Opening socket..."); };
+        ws.onopen = function(evt) {
+          log("Opening socket...");
+        };
 
-        keysdown = {}
-	$(window).keydown(function(event) {
-	  var k = String.fromCharCode(event.which).toLowerCase();
-	  if(keysdown[event.which] == null && k != 's') {
-		keysdown[event.which] = true;
-		sender(k);
-	  }
+        var sendTextBox = function() {
+          var msg = $('#msg').val();
+          send(msg);
+          $('#msg').val('');
+          log('&gt;&nbsp;'+ msg);
+        }
+
+        $('#btnSend').click(sendTextBox);
+
+        $(window).keyup(function(event) {
+          if(event.which == 13) {
+            sendTextBox();
+          }
         });
-	$(window).keyup(function(event) {
-	  keysdown[event.which] = null;
-	  sender('s');
-	});
-
-});
+      });
     </script>
   </head>
 
   <body>
-    <div id="chart"></div>
     <div id="log" style="overflow:scroll;width:100%; height:200px;background-color:#ffeeaa; margin:auto; text-align:left"></div>
 
     <div style="margin:10px">
       <input type="text" id="msg" style="background:#fff;width:200px"/>
-      <input type="button" id="thebutton" value="Send" />
+      <input type="button" id="btnSend" value="Send" />
     </div>
 
   </body>
