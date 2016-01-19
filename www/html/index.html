@@ -1,72 +1,24 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
   <head>
-    <title>WebSockets with Python & Tornado</title>
-    <meta charset="utf-8" />
-    <style type="text/css">
-      body {
-        text-align: center;
-        min-width: 500px;
-      }
-#chart {
-  font-family: "Helvetica Neue", Helvetica, sans-serif;
-  font-size: 14px;
-}
-#chart path {
-  fill: none;
-}
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>WebSocket</title>
 
-/* layers */
-#chart .layer-0 path {
-  fill: steelblue;
-}
-#chart .layer-1 path {
-  fill: white !important;
-  opacity: 0.3;
-  stroke-width: 2px;
-  stroke: #999;
-}
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
 
-/* Outer circle, tick-circles and spokes */
-#chart circle.outer {
-  stroke: #aaa;
-  stroke-dasharray: 4, 4;  
-}
-#chart .tick-circles circle {
-  stroke: #ddd;
-  stroke-dasharray: 2, 2;  
-}
-#chart .spokes line {
-  stroke: #666;
-  stroke-width: 0.2;
-}
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
 
-/* Axis */
-#chart .axis text {
-  font-size: 11px;
-}
-#chart .axis path {
-  stroke: #999;
-  shape-rendering: crispEdges;
-}
-#chart .axis line {
-  stroke: #999;
-  shape-rendering: crispEdges;
-}
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
 
-/* Labels */
-#chart .labels text {
-  fill: #333;
-  font-size: 8px;
-  font-weight: 500;
-}
-
-    </style>
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
     
-    <script src="/js/d3.min.js" charset="utf-8"></script>
-    <script src="/js/radialBarChart.js"></script>
     <script src="/js/reconnecting-websocket.js"></script>
-    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+
     <script>
       $(function() {
         var ws = new ReconnectingWebSocket("ws://localhost:8000/ws");
@@ -84,7 +36,6 @@
         };
         ws.onclose = function(evt) { 
           log("Connection was closed..."); 
-          $("#thebutton #msg").prop('disabled', true);
         };
         ws.onopen = function(evt) {
           log("Opening socket...");
@@ -97,8 +48,6 @@
           log('&gt;&nbsp;'+ msg);
         }
 
-        $('#btnSend').click(sendTextBox);
-
         $(window).keyup(function(event) {
           if(event.which == 13) {
             sendTextBox();
@@ -108,12 +57,18 @@
     </script>
   </head>
 
-  <body>
-    <div id="log" style="overflow:scroll;width:100%; height:200px;background-color:#ffeeaa; margin:auto; text-align:left"></div>
+  <body style="background: #666;">
+    <div class="container">
 
-    <div style="margin:10px">
-      <input type="text" id="msg" style="background:#fff;width:200px"/>
-      <input type="button" id="btnSend" value="Send" />
+      <div class="input-group" style="padding: 1em">
+        <input type="text" class="form-control" id="msg"/>
+        <span class="input-group-btn">
+          <button class="btn btn-default" type="button">Send</button>
+        </span>
+      </div>
+
+      <div class="well" id="log" style="overflow:scroll; height: 20em;"></div>
+
     </div>
 
   </body>
