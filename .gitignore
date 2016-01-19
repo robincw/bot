@@ -3,6 +3,9 @@
 *.ko
 *.obj
 *.elf
+.build
+.build/
+*.pickle
 
 # Precompiled Headers
 *.gch
