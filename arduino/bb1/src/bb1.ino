@@ -32,9 +32,9 @@ const byte fullSteps[4] = {       0x03,       0x06,       0x0c,       0x09 };
 // The index in halfSteps of the current position of each motor
 int stepperPos[2] = {0,0};
 // The number of steps remaining (+/-) for both motors
-int stepsRemaining[2] = {0,0};
+long stepsRemaining[2] = {0,0};
 // The queue of next remaining steps for both motors
-QueueArray <int> nextMoves[2]; 
+QueueArray <long> nextMoves[2]; 
 // To pause movement
 boolean pause = false;
 
@@ -54,22 +54,21 @@ void setup() {
     Serial.println("BoxBot1");
   //}
   
-  fwd(10);
-  left(60);
-  back(10);
-  left(60);
-  fwd(10);
+  fwd(1);
+  left(5);
+  right(5);
+  back(1);
 }
 
-int cmToSteps(int cm) {
+long cmToSteps(int cm) {
   return fullWheelTurn * cm / (wheelDia * pi);
 }
-int angleToSteps(int angle) {
+long angleToSteps(int angle) {
   return (wheelSpan / wheelDia * fullWheelTurn) / (360 / angle);
 }
 
 void fwd(int cm) {
-  int steps = cmToSteps(cm);
+  long steps = cmToSteps(cm);
   nextMoves[0].enqueue(steps);
   nextMoves[1].enqueue(steps);
   if(Serial) {
@@ -79,7 +78,7 @@ void fwd(int cm) {
   }
 }
 void back(int cm) {
-  int steps = cmToSteps(cm);
+  long steps = cmToSteps(cm);
   nextMoves[0].enqueue(-steps);
   nextMoves[1].enqueue(-steps);
   if(Serial) {
@@ -89,7 +88,7 @@ void back(int cm) {
   }
 }
 void left(int angle) {
-  int steps = angleToSteps(angle);
+  long steps = angleToSteps(angle);
   nextMoves[0].enqueue(-steps);
   nextMoves[1].enqueue(steps);
   if(Serial) {
@@ -99,7 +98,7 @@ void left(int angle) {
   }
 }
 void right(int angle) {
-  int steps = angleToSteps(angle);
+  long steps = angleToSteps(angle);
   nextMoves[0].enqueue(steps);
   nextMoves[1].enqueue(-steps);
   if(Serial) {
@@ -122,11 +121,18 @@ void stop() {
   }
 }
 
+void blink() {
+  digitalWrite(ledPin, HIGH);   // turn the LED on (HIGH is the voltage level)
+  delay(10);               // wait for a second
+  digitalWrite(ledPin, LOW);    // turn the LED off by making the voltage LOW
+}
+
 void consumeMotorData(int i) {
   int datashift = i*4;
   stepperPos[i] = abs(stepsRemaining[i] % (stepMode==0 ? 8 : 4));
   
   if(stepsRemaining[i]==0) {
+    blink();
     if(nextMoves[i].count()>0) {
       // finished moving stepper i, get next move
       stepsRemaining[i] = nextMoves[i].dequeue();
