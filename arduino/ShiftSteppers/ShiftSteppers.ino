@@ -103,6 +103,7 @@ void consumeMotorData(int i) {
   stepperPos[i] = abs(stepsRemaining[i] % (stepMode==0 ? 8 : 4));
   
   if(stepsRemaining[i]==0) {
+    blink();
     if(nextMoves[i].count()>0) {
       // finished moving stepper i, get next move
       stepsRemaining[i] = nextMoves[i].dequeue();
@@ -148,12 +149,18 @@ void drive() {
   delay(stepDelay);
 }
 
+void blink() {
+  digitalWrite(ledPin, HIGH);   // turn the LED on (HIGH is the voltage level)
+  delay(10);               // wait for a second
+  digitalWrite(ledPin, LOW);    // turn the LED off by making the voltage LOW
+}
+
 void readCommands() {
   char cmd = 's';
   int  val = 0;
   while(Serial.available() > 0) {
     // read the incoming byte:
-    inByte = Serial.read();
+    char inByte = Serial.read();
     switch (inByte) {
       case 'f':
       case 'b':
