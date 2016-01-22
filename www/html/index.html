@@ -53,6 +53,7 @@
             sendTextBox();
           }
         });
+        $('#sendmsg').click(sendTextBox);
       });
     </script>
   </head>
@@ -63,7 +64,7 @@
       <div class="input-group" style="padding: 1em">
         <input type="text" class="form-control" id="msg"/>
         <span class="input-group-btn">
-          <button class="btn btn-default" type="button">Send</button>
+          <button class="btn btn-default" type="button" id="sendmsg">Send</button>
         </span>
       </div>
 
