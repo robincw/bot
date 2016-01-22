@@ -16,7 +16,7 @@ const int clockPin = 12;
 ////Pin connected to DS of 74HC595
 const int dataPin = 8;
 //Steps per wheel revolution
-int fullWheelTurn = 2048;
+long fullWheelTurn = 2048;
 const float wheelDia = 6.5; //cm
 const float wheelSpan = 19.5; //cm
 const float pi = 3.14159265359;
@@ -61,10 +61,16 @@ void setup() {
 }
 
 long cmToSteps(int cm) {
-  return fullWheelTurn * cm / (wheelDia * pi);
+  long steps = fullWheelTurn * cm / (wheelDia * pi);
+  Serial.print("cm to steps:");
+  Serial.println(steps);
+  return steps;
 }
 long angleToSteps(int angle) {
-  return (wheelSpan / wheelDia * fullWheelTurn) / (360 / angle);
+  long steps = (wheelSpan / wheelDia * fullWheelTurn) / (360 / angle);
+  Serial.print("angle to steps:");
+  Serial.println(steps);
+  return steps;
 }
 
 void fwd(int cm) {
