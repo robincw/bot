@@ -21,7 +21,7 @@
 
     <script>
       $(function() {
-        var ws = new ReconnectingWebSocket("ws://localhost:8000/ws");
+        var ws = new ReconnectingWebSocket("ws://" + location.host + "/ws");
 
         var log = function(msg){
           $("#log").html($("#log").html() + "<br />" + msg);
