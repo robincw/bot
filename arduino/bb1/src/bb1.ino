@@ -95,8 +95,8 @@ void back(int cm) {
 }
 void left(int angle) {
   long steps = angleToSteps(angle);
-  nextMoves[0].enqueue(-steps);
-  nextMoves[1].enqueue(steps);
+  nextMoves[0].enqueue(steps);
+  nextMoves[1].enqueue(-steps);
   if(Serial) {
     Serial.print("l");
     Serial.print(angle);
@@ -105,8 +105,8 @@ void left(int angle) {
 }
 void right(int angle) {
   long steps = angleToSteps(angle);
-  nextMoves[0].enqueue(steps);
-  nextMoves[1].enqueue(-steps);
+  nextMoves[0].enqueue(-steps);
+  nextMoves[1].enqueue(steps);
   if(Serial) {
     Serial.print("r");
     Serial.print(angle);
