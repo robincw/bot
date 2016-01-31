@@ -296,12 +296,14 @@ void readCommands() {
       case 'L':
       case 'r':
       case 'R':
-      case 'v':
-      case 'V':
-        // these commands are followed by an int
-        val = Serial.parseInt();
       case 's':
       case 'S':
+      case 't':
+      case 'T':
+        // these commands are followed by an int
+        val = Serial.parseInt();
+      case 'h':
+      case 'H':
       case 'p':
       case 'P':
       case 'g':
@@ -311,6 +313,7 @@ void readCommands() {
         break;
       case ';':
       case ' ':
+      case '\n':
         // execute the command when terminated with ;
         switch(cmd) {
           case 'f':

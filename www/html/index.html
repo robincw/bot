@@ -28,7 +28,7 @@
           $('#log').scrollTop($('#log')[0].scrollHeight);
         }
         var send = function(msg) {
-          ws.send(msg);
+          ws.send(msg+"\n");
         }
 
         ws.onmessage = function(evt) {
