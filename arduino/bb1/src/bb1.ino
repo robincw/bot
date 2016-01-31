@@ -1,10 +1,14 @@
 #include <QueueArray.h>
+#include <Servo.h>
+
 /*
   Stepper motors driven by shift register
 
  Hardware:
  * 74HC595 shift register 
  * Two stepper motors attached to the outputs of the shift register
+ * Servo to point sensors
+ * Two sharp infrared range finder sensors at 90 degrees
 
  */
 // LED
@@ -15,10 +19,18 @@ const int latchPin = 7;
 const int clockPin = 12;
 ////Pin connected to DS of 74HC595
 const int dataPin = 8;
+
+const int oaFaceServo   = 5;  // [pwm]
+const int iaIRranger1   = A5; //
+const int iaIRranger2   = A4; //
+
+Servo faceServo;
+int face_angle  = 90;
+
 //Steps per wheel revolution
 long fullWheelTurn = 2048;
 const float wheelDia = 6.5; //cm
-const float wheelSpan = 19.5; //cm
+const float wheelSpan = 19.4; //cm
 const float pi = 3.14159265359;
 
 // Step mode and delay
@@ -37,6 +49,86 @@ long stepsRemaining[2] = {0,0};
 QueueArray <long> nextMoves[2]; 
 // To pause movement
 boolean pause = false;
+ 
+void face(int angle) {
+  if(face_angle != angle) {
+    if(angle<0) angle = 0;
+    if(angle>180) angle = 180;
+    faceServo.write(angle);
+    delay(abs(face_angle-angle)*2);
+    face_angle = angle;
+  }
+}
+
+void isort(double *a, int n) //  *a is an array pointer function
+{
+  for (int i = 1; i < n; ++i)
+  {
+    double j = a[i];
+    int k;
+    for (k = i - 1; (k >= 0) && (j < a[k]); k--)
+    {
+      a[k + 1] = a[k];
+    }
+    a[k + 1] = j;
+  }
+}
+
+double readAnalogue(int iaPin, int numReadings = 8, int interval = 2, double aref = 4.26) {
+  double volts   = 0;
+  double readings[numReadings];
+  for(int index = 0; index < numReadings; index++) // take x number of readings from the sensor and average them
+  {
+    volts   = analogRead(iaPin)*(aref/1024.0);  // value from sensor * (5/1024) - if running 3.3.volts then change 5 to 3.3
+    readings[index] = volts;
+    delay(interval);
+  }
+  isort(&readings[0], numReadings);
+  double median = numReadings % 2 ? readings[numReadings / 2] : (readings[numReadings / 2 - 1] + readings[numReadings / 2]) / 2;
+  return median;
+}
+
+int getDistance(int iaIRranger, int numReadings = 5, int interval = 2) {
+    int distance  = 0;
+    double median = readAnalogue(iaIRranger, numReadings, interval);
+    if(iaIRranger==iaIRranger1)
+    {
+      median = 65*pow(median, -1.05); // worked out from graph 65 = theretical distance / (1/Volts)S - luckylarry.co.uk
+    }
+    else if(iaIRranger==iaIRranger2)
+    {
+      median = 60.495 * pow(median,-1.1904); //65*pow(volts, -1.10);  // worked out from graph 65 = theretical distance / (1/Volts)S - luckylarry.co.uk
+    }
+    distance = (int) median;
+    distance = distance>150 ? 150 : distance;
+    return distance;
+}
+
+String rangers() {
+  String r = String(face_angle);
+  r=r+"=";
+  r=r+String((getDistance(iaIRranger1) + getDistance(iaIRranger1))/2);
+  r=r+",";
+  r=r+String(face_angle+90);
+  r=r+"=";
+  r=r+String((getDistance(iaIRranger2) + getDistance(iaIRranger2))/2);
+  return r;
+}
+
+String scan(int angle) {
+  face(angle);
+  return rangers();
+}
+
+String scanTo(int angle) {
+  int step = angle < face_angle ? -1 : 1;
+  String r = rangers();
+  while(face_angle != angle) {
+    face(angle + step);
+    r = r + "," + rangers();
+  }
+  return r;
+}
 
 void setup() {
   //set pins to output because they are addressed in the main loop
@@ -44,6 +136,10 @@ void setup() {
   pinMode(clockPin, OUTPUT);
   pinMode(dataPin, OUTPUT);
   
+  // Sensors
+  faceServo.attach(oaFaceServo);
+  face(face_angle);
+
   //adjust steps per wheel turn for stepping mode
   fullWheelTurn = fullWheelTurn * (2 - stepMode);
   
@@ -62,14 +158,14 @@ void setup() {
 
 long cmToSteps(int cm) {
   long steps = fullWheelTurn * cm / (wheelDia * pi);
-  Serial.print("cm to steps:");
-  Serial.println(steps);
+  //Serial.print("cm to steps:");
+  //Serial.println(steps);
   return steps;
 }
 long angleToSteps(int angle) {
   long steps = (wheelSpan / wheelDia * fullWheelTurn) / (360 / angle);
-  Serial.print("angle to steps:");
-  Serial.println(steps);
+  //Serial.print("angle to steps:");
+  //Serial.println(steps);
   return steps;
 }
 
@@ -78,9 +174,9 @@ void fwd(int cm) {
   nextMoves[0].enqueue(steps);
   nextMoves[1].enqueue(steps);
   if(Serial) {
-    Serial.print("f");
-    Serial.print(cm);
-    Serial.println(";");
+    //Serial.print("f");
+    //Serial.print(cm);
+    //Serial.println(";");
   }
 }
 void back(int cm) {
@@ -88,9 +184,9 @@ void back(int cm) {
   nextMoves[0].enqueue(-steps);
   nextMoves[1].enqueue(-steps);
   if(Serial) {
-    Serial.print("b");
-    Serial.print(cm);
-    Serial.println(";");
+    //Serial.print("b");
+    //Serial.print(cm);
+    //Serial.println(";");
   }
 }
 void left(int angle) {
@@ -98,9 +194,9 @@ void left(int angle) {
   nextMoves[0].enqueue(steps);
   nextMoves[1].enqueue(-steps);
   if(Serial) {
-    Serial.print("l");
-    Serial.print(angle);
-    Serial.println(";");
+    //Serial.print("l");
+    //Serial.print(angle);
+    //Serial.println(";");
   }
 }
 void right(int angle) {
@@ -108,12 +204,12 @@ void right(int angle) {
   nextMoves[0].enqueue(-steps);
   nextMoves[1].enqueue(steps);
   if(Serial) {
-    Serial.print("r");
-    Serial.print(angle);
-    Serial.println(";");
+    //Serial.print("r");
+    //Serial.print(angle);
+    //Serial.println(";");
   }
 }
-void stop() {
+void halt() {
   stepsRemaining[0] = 0;
   stepsRemaining[1] = 0;
   while(!nextMoves[0].isEmpty()) {
@@ -123,7 +219,7 @@ void stop() {
     nextMoves[1].dequeue();
   }
   if(Serial) {
-    Serial.println("s;");
+    //Serial.println("s;");
   }
 }
 
@@ -191,45 +287,67 @@ void readCommands() {
   while(Serial.available() > 0) {
     // read the incoming byte:
     inByte = Serial.read();
-    Serial.print(inByte);
     switch (inByte) {
       case 'f':
+      case 'F':
       case 'b':
+      case 'B':
       case 'l':
+      case 'L':
       case 'r':
-        // these movement commands are followed by an int
+      case 'R':
+      case 'v':
+      case 'V':
+        // these commands are followed by an int
         val = Serial.parseInt();
-        Serial.print(val);
       case 's':
+      case 'S':
       case 'p':
+      case 'P':
       case 'g':
+      case 'G':
         // remember the command
         cmd = inByte;
         break;
       case ';':
-         Serial.println(inByte);
+      case ' ':
         // execute the command when terminated with ;
         switch(cmd) {
           case 'f':
+          case 'F':
             fwd(val);
             break;
           case 'b':
+          case 'B':
             back(val);
             break;
           case 'l':
+          case 'L':
             left(val);
             break;
           case 'r':
+          case 'R':
             right(val);
             break;
-          case 's':
-            stop();
+          case 'h':
+          case 'H':
+            halt();
             break;
           case 'p':
+          case 'P':
             pause = true;
             break;
           case 'g':
+          case 'G':
             pause = false;
+            break;
+          case 's':
+          case 'S':
+            Serial.println(scan(val));
+            break;
+          case 't':
+          case 'T':
+            Serial.println(scanTo(val));
             break;
         }
         break;
