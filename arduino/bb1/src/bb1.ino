@@ -20,7 +20,7 @@ const int clockPin = 12;
 ////Pin connected to DS of 74HC595
 const int dataPin = 8;
 
-const int oaFaceServo   = 5;  // [pwm]
+const int oaFaceServo   = 6;  // [pwm]
 const int iaIRranger1   = A5; //
 const int iaIRranger2   = A4; //
 
