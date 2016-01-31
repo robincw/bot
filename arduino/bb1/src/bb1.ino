@@ -124,7 +124,7 @@ String scanTo(int angle) {
   int step = angle < face_angle ? -1 : 1;
   String r = rangers();
   while(face_angle != angle) {
-    face(angle + step);
+    face(face_angle + step);
     r = r + "," + rangers();
   }
   return r;
