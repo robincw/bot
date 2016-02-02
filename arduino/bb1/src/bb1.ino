@@ -105,11 +105,11 @@ int getDistance(int iaIRranger, int numReadings = 5, int interval = 2) {
 }
 
 String rangers() {
-  String r = String(face_angle);
+  String r = String((face_angle+360-45)%360);
   r=r+"=";
   r=r+String((getDistance(iaIRranger1) + getDistance(iaIRranger1))/2);
   r=r+",";
-  r=r+String(face_angle+90);
+  r=r+String((face_angle+360+45)%360);
   r=r+"=";
   r=r+String((getDistance(iaIRranger2) + getDistance(iaIRranger2))/2);
   return r;
