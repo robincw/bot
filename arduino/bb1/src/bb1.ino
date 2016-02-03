@@ -47,8 +47,6 @@ int stepperPos[2] = {0,0};
 long stepsRemaining[2] = {0,0};
 // The queue of next remaining steps for both motors
 QueueArray <long> nextMoves[2]; 
-// The commands queued to be processed
-QueueArray <String> commands;
 // To pause movement
 boolean pause = false;
  
@@ -118,22 +116,17 @@ String rangers() {
 }
 
 String scan(int angle) {
-  commands.enqueue("s"+String(angle));
   face(angle);
-  String r = rangers();
-  finishCommand();
-  return r;
+  return rangers();
 }
 
 String scanTo(int angle) {
-  commands.enqueue("t"+String(angle));
   int step = angle < face_angle ? -1 : 1;
   String r = rangers();
   while(face_angle != angle) {
     face(face_angle + step);
     r = r + "," + rangers();
   }
-  finishCommand();
   return r;
 }
 
@@ -177,31 +170,46 @@ long angleToSteps(int angle) {
 }
 
 void fwd(int cm) {
-  commands.enqueue("f"+String(cm));
   long steps = cmToSteps(cm);
   nextMoves[0].enqueue(steps);
   nextMoves[1].enqueue(steps);
+  if(Serial) {
+    //Serial.print("f");
+    //Serial.print(cm);
+    //Serial.println(";");
+  }
 }
 void back(int cm) {
-  commands.enqueue("b"+String(cm));
   long steps = cmToSteps(cm);
   nextMoves[0].enqueue(-steps);
   nextMoves[1].enqueue(-steps);
+  if(Serial) {
+    //Serial.print("b");
+    //Serial.print(cm);
+    //Serial.println(";");
+  }
 }
 void left(int angle) {
-  commands.enqueue("l"+String(angle));
   long steps = angleToSteps(angle);
   nextMoves[0].enqueue(steps);
   nextMoves[1].enqueue(-steps);
+  if(Serial) {
+    //Serial.print("l");
+    //Serial.print(angle);
+    //Serial.println(";");
+  }
 }
 void right(int angle) {
-  commands.enqueue("r"+String(angle));
   long steps = angleToSteps(angle);
   nextMoves[0].enqueue(-steps);
   nextMoves[1].enqueue(steps);
+  if(Serial) {
+    //Serial.print("r");
+    //Serial.print(angle);
+    //Serial.println(";");
+  }
 }
 void halt() {
-  commands.enqueue("halt");
   stepsRemaining[0] = 0;
   stepsRemaining[1] = 0;
   while(!nextMoves[0].isEmpty()) {
@@ -209,6 +217,9 @@ void halt() {
   }
   while(!nextMoves[1].isEmpty()) {
     nextMoves[1].dequeue();
+  }
+  if(Serial) {
+    //Serial.println("s;");
   }
 }
 
@@ -218,21 +229,12 @@ void blink() {
   digitalWrite(ledPin, LOW);    // turn the LED off by making the voltage LOW
 }
 
-void finishCommand() {
-  String command = commands.dequeue();
-  if(Serial) {
-    Serial.println(command);
-  }
-  blink();
-}
-
-bool consumeMotorData(int i) {
-  bool finishedCommand = false;
+void consumeMotorData(int i) {
   int datashift = i*4;
   stepperPos[i] = abs(stepsRemaining[i] % (stepMode==0 ? 8 : 4));
   
   if(stepsRemaining[i]==0) {
-    finishedCommand = true;
+    blink();
     if(nextMoves[i].count()>0) {
       // finished moving stepper i, get next move
       stepsRemaining[i] = nextMoves[i].dequeue();
@@ -260,7 +262,6 @@ bool consumeMotorData(int i) {
     }
     
   }
-  return finishedCommand;
 }
 
 void drive() {
@@ -268,11 +269,8 @@ void drive() {
 
   if(!pause) {
     // populate the data to send to the shift register
-    bool finishedCommand = consumeMotorData(0);
-    finishedCommand = consumeMotorData(1) || finishedCommand;
-    if(finishedCommand) {
-      finishCommand();
-    }
+    consumeMotorData(0);
+    consumeMotorData(1);
   }
   
   digitalWrite(latchPin, 0);
