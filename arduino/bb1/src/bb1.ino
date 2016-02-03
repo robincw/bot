@@ -226,12 +226,13 @@ void finishCommand() {
   blink();
 }
 
-void consumeMotorData(int i) {
+bool consumeMotorData(int i) {
+  bool finishedCommand = false;
   int datashift = i*4;
   stepperPos[i] = abs(stepsRemaining[i] % (stepMode==0 ? 8 : 4));
   
   if(stepsRemaining[i]==0) {
-    finishCommand();
+    finishedCommand = true;
     if(nextMoves[i].count()>0) {
       // finished moving stepper i, get next move
       stepsRemaining[i] = nextMoves[i].dequeue();
@@ -259,6 +260,7 @@ void consumeMotorData(int i) {
     }
     
   }
+  return finishedCommand;
 }
 
 void drive() {
@@ -266,8 +268,11 @@ void drive() {
 
   if(!pause) {
     // populate the data to send to the shift register
-    consumeMotorData(0);
-    consumeMotorData(1);
+    bool finishedCommand = consumeMotorData(0)
+    finishedCommand = consumeMotorData(1) || finishedCommand;
+    if(finishedCommand) {
+      finishCommand();
+    }
   }
   
   digitalWrite(latchPin, 0);
