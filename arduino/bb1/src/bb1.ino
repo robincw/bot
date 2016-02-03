@@ -268,7 +268,7 @@ void drive() {
 
   if(!pause) {
     // populate the data to send to the shift register
-    bool finishedCommand = consumeMotorData(0)
+    bool finishedCommand = consumeMotorData(0);
     finishedCommand = consumeMotorData(1) || finishedCommand;
     if(finishedCommand) {
       finishCommand();
