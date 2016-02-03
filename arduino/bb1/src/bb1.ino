@@ -118,6 +118,7 @@ String rangers() {
 }
 
 String scan(int angle) {
+  commands.enqueue("s"+String(angle));
   face(angle);
   String r = rangers();
   finishCommand();
@@ -125,6 +126,7 @@ String scan(int angle) {
 }
 
 String scanTo(int angle) {
+  commands.enqueue("t"+String(angle));
   int step = angle < face_angle ? -1 : 1;
   String r = rangers();
   while(face_angle != angle) {
@@ -175,26 +177,31 @@ long angleToSteps(int angle) {
 }
 
 void fwd(int cm) {
+  commands.enqueue("f"+String(cm));
   long steps = cmToSteps(cm);
   nextMoves[0].enqueue(steps);
   nextMoves[1].enqueue(steps);
 }
 void back(int cm) {
+  commands.enqueue("b"+String(cm));
   long steps = cmToSteps(cm);
   nextMoves[0].enqueue(-steps);
   nextMoves[1].enqueue(-steps);
 }
 void left(int angle) {
+  commands.enqueue("l"+String(angle));
   long steps = angleToSteps(angle);
   nextMoves[0].enqueue(steps);
   nextMoves[1].enqueue(-steps);
 }
 void right(int angle) {
+  commands.enqueue("r"+String(angle));
   long steps = angleToSteps(angle);
   nextMoves[0].enqueue(-steps);
   nextMoves[1].enqueue(steps);
 }
 void halt() {
+  commands.enqueue("halt");
   stepsRemaining[0] = 0;
   stepsRemaining[1] = 0;
   while(!nextMoves[0].isEmpty()) {
@@ -304,7 +311,6 @@ void readCommands() {
       case ';':
       case ' ':
       case '\n':
-        commands.enqueue(cmd+String(val));
         // execute the command when terminated with ;
         switch(cmd) {
           case 'f':
