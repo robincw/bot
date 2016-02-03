@@ -47,6 +47,8 @@ int stepperPos[2] = {0,0};
 long stepsRemaining[2] = {0,0};
 // The queue of next remaining steps for both motors
 QueueArray <long> nextMoves[2]; 
+// The commands queued to be processed
+QueueArray <String> commands;
 // To pause movement
 boolean pause = false;
  
@@ -117,7 +119,9 @@ String rangers() {
 
 String scan(int angle) {
   face(angle);
-  return rangers();
+  String r = rangers();
+  finishCommand();
+  return r;
 }
 
 String scanTo(int angle) {
@@ -127,6 +131,7 @@ String scanTo(int angle) {
     face(face_angle + step);
     r = r + "," + rangers();
   }
+  finishCommand();
   return r;
 }
 
@@ -173,41 +178,21 @@ void fwd(int cm) {
   long steps = cmToSteps(cm);
   nextMoves[0].enqueue(steps);
   nextMoves[1].enqueue(steps);
-  if(Serial) {
-    //Serial.print("f");
-    //Serial.print(cm);
-    //Serial.println(";");
-  }
 }
 void back(int cm) {
   long steps = cmToSteps(cm);
   nextMoves[0].enqueue(-steps);
   nextMoves[1].enqueue(-steps);
-  if(Serial) {
-    //Serial.print("b");
-    //Serial.print(cm);
-    //Serial.println(";");
-  }
 }
 void left(int angle) {
   long steps = angleToSteps(angle);
   nextMoves[0].enqueue(steps);
   nextMoves[1].enqueue(-steps);
-  if(Serial) {
-    //Serial.print("l");
-    //Serial.print(angle);
-    //Serial.println(";");
-  }
 }
 void right(int angle) {
   long steps = angleToSteps(angle);
   nextMoves[0].enqueue(-steps);
   nextMoves[1].enqueue(steps);
-  if(Serial) {
-    //Serial.print("r");
-    //Serial.print(angle);
-    //Serial.println(";");
-  }
 }
 void halt() {
   stepsRemaining[0] = 0;
@@ -218,9 +203,6 @@ void halt() {
   while(!nextMoves[1].isEmpty()) {
     nextMoves[1].dequeue();
   }
-  if(Serial) {
-    //Serial.println("s;");
-  }
 }
 
 void blink() {
@@ -229,12 +211,20 @@ void blink() {
   digitalWrite(ledPin, LOW);    // turn the LED off by making the voltage LOW
 }
 
+void finishCommand() {
+  String command = commands.dequeue();
+  if(Serial) {
+    Serial.println(command);
+  }
+  blink();
+}
+
 void consumeMotorData(int i) {
   int datashift = i*4;
   stepperPos[i] = abs(stepsRemaining[i] % (stepMode==0 ? 8 : 4));
   
   if(stepsRemaining[i]==0) {
-    blink();
+    finishCommand();
     if(nextMoves[i].count()>0) {
       // finished moving stepper i, get next move
       stepsRemaining[i] = nextMoves[i].dequeue();
@@ -314,6 +304,7 @@ void readCommands() {
       case ';':
       case ' ':
       case '\n':
+        commands.enqueue(cmd+String(val));
         // execute the command when terminated with ;
         switch(cmd) {
           case 'f':
