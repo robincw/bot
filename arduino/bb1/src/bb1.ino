@@ -45,6 +45,8 @@ const byte fullSteps[4] = {       0x03,       0x06,       0x0c,       0x09 };
 int stepperPos[2] = {0,0};
 // The number of steps remaining (+/-) for both motors
 long stepsRemaining[2] = {0,0};
+// A flag to indicate that we haven't printed a . to Serial to indicate driving command finished
+bool driving = false;
 // The queue of next remaining steps for both motors
 QueueArray <long> nextMoves[2]; 
 // To pause movement
@@ -188,6 +190,7 @@ void right(int angle) {
   nextMoves[1].enqueue(steps);
 }
 void halt() {
+  driving = true;
   stepsRemaining[0] = 0;
   stepsRemaining[1] = 0;
   while(!nextMoves[0].isEmpty()) {
@@ -204,16 +207,24 @@ void blink() {
   digitalWrite(ledPin, LOW);    // turn the LED off by making the voltage LOW
 }
 
+void doneDriving() {
+  blink();
+  if(driving && Serial) {
+    Serial.println(".");
+    driving = false;
+  }
+}
+
 void consumeMotorData(int i) {
   int datashift = i*4;
   stepperPos[i] = abs(stepsRemaining[i] % (stepMode==0 ? 8 : 4));
   
   if(stepsRemaining[i]==0) {
-    blink();
-    if(Serial) Serial.println(".");
+    doneDriving();
     if(nextMoves[i].count()>0) {
       // finished moving stepper i, get next move
       stepsRemaining[i] = nextMoves[i].dequeue();
+      driving = true;
     }
     // stepper position might be too wrong now so calculate the offset
     // TODO: use stepperPos[i] - (stepsRemaining[i] % 8);
