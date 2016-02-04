@@ -74,7 +74,7 @@ void isort(double *a, int n) //  *a is an array pointer function
   }
 }
 
-double readAnalogue(int iaPin, int numReadings = 8, int interval = 2, double aref = 4.26) {
+double readAnalogue(int iaPin, int numReadings = 8, int interval = 2, double aref = 5) {
   double volts   = 0;
   double readings[numReadings];
   for(int index = 0; index < numReadings; index++) // take x number of readings from the sensor and average them
@@ -115,19 +115,17 @@ String rangers() {
   return r;
 }
 
-String scan(int angle) {
+void scan(int angle) {
   face(angle);
-  return rangers();
+  if(Serial) Serial.println(rangers());
 }
 
-String scanTo(int angle) {
+void scanTo(int angle) {
   int step = angle < face_angle ? -1 : 1;
-  String r = rangers();
   while(face_angle != angle) {
+    if(Serial) Serial.println(rangers());
     face(face_angle + step);
-    r = r + "," + rangers();
   }
-  return r;
 }
 
 void setup() {
@@ -173,41 +171,21 @@ void fwd(int cm) {
   long steps = cmToSteps(cm);
   nextMoves[0].enqueue(steps);
   nextMoves[1].enqueue(steps);
-  if(Serial) {
-    //Serial.print("f");
-    //Serial.print(cm);
-    //Serial.println(";");
-  }
 }
 void back(int cm) {
   long steps = cmToSteps(cm);
   nextMoves[0].enqueue(-steps);
   nextMoves[1].enqueue(-steps);
-  if(Serial) {
-    //Serial.print("b");
-    //Serial.print(cm);
-    //Serial.println(";");
-  }
 }
 void left(int angle) {
   long steps = angleToSteps(angle);
   nextMoves[0].enqueue(steps);
   nextMoves[1].enqueue(-steps);
-  if(Serial) {
-    //Serial.print("l");
-    //Serial.print(angle);
-    //Serial.println(";");
-  }
 }
 void right(int angle) {
   long steps = angleToSteps(angle);
   nextMoves[0].enqueue(-steps);
   nextMoves[1].enqueue(steps);
-  if(Serial) {
-    //Serial.print("r");
-    //Serial.print(angle);
-    //Serial.println(";");
-  }
 }
 void halt() {
   stepsRemaining[0] = 0;
@@ -217,9 +195,6 @@ void halt() {
   }
   while(!nextMoves[1].isEmpty()) {
     nextMoves[1].dequeue();
-  }
-  if(Serial) {
-    //Serial.println("s;");
   }
 }
 
@@ -235,6 +210,7 @@ void consumeMotorData(int i) {
   
   if(stepsRemaining[i]==0) {
     blink();
+    if(Serial) Serial.println(".");
     if(nextMoves[i].count()>0) {
       // finished moving stepper i, get next move
       stepsRemaining[i] = nextMoves[i].dequeue();
@@ -346,11 +322,11 @@ void readCommands() {
             break;
           case 's':
           case 'S':
-            Serial.println(scan(val));
+            scan(val);
             break;
           case 't':
           case 'T':
-            Serial.println(scanTo(val));
+            scanTo(val);
             break;
         }
         break;
