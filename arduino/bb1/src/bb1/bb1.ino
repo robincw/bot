@@ -224,7 +224,7 @@ void consumeMotorData(int i) {
     if(nextMoves[i].count()>0) {
       // finished moving stepper i, get next move
       stepsRemaining[i] = nextMoves[i].dequeue();
-      driving = true;
+      if(i==0) driving = true;
     }
     // stepper position might be too wrong now so calculate the offset
     // TODO: use stepperPos[i] - (stepsRemaining[i] % 8);
