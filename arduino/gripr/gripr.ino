@@ -47,6 +47,7 @@ void moveArm() {
 void setArm() {
   if(m == 1) {
     w = w + x;
+    d = max(0, min(w + 90, 180));
   } else {    
     if(r == 1) {
       z = max(0, min(z + y, 180));
