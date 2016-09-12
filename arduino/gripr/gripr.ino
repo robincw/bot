@@ -52,23 +52,14 @@ void moveArm() {
   grip(e);
 }
 void setArm() {
-  double R = sqrt((x*x)+(y*y)+(z*z));
-  R = (R > B+C) ? B+C : R;
-  a = 90;
-  if(y==0) {
-    a = (x>0) ? 0 : 180;
-  } else if(x!=0) {
-    a = 90 + (rad2deg(atan(y/x)));
-  }
+  a = a + x;
   
-  b = (R<10) ? 0 
-  : 90-rad2deg(asin(z/R));
+  b = b + y;
   
-  c = (R<10) ? 0 
-  : 180-rad2deg(acos(((B*B)+(C*C)-(R*R))/(2*B*C)));
-  elbow(c);
+  c = z + (180 - b);
 
-  d = 180-a+w;
+  d = w + (180 - a);
+  
         Serial.print("{x:");
         Serial.print(x);
         Serial.print(",y:");
