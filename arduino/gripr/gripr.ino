@@ -56,28 +56,44 @@ void setArm() {
   
   b = b + y;
   
-  c = z + (180 - b);
-
+  if(m == 1) {
+    c = c + y;
+  } else {
+    c = c + (180 - b);
+  }
+  
+  if(r == 1) {
+    w = w + x;
+  }
   d = w + (180 - a);
   
-        Serial.print("{x:");
-        Serial.print(x);
-        Serial.print(",y:");
-        Serial.print(y);
-        Serial.print(",z:");
-        Serial.print(z);
-        Serial.println("}");
-        Serial.print("{a:");
-        Serial.print(a);
-        Serial.print(",b:");
-        Serial.print(b);
-        Serial.print(",c:");
-        Serial.print(c);
-        Serial.print(",d:");
-        Serial.print(d);
-        Serial.print(",e:");
-        Serial.print(e);
-        Serial.println("}");
+  if(l == 1) {
+    e = 0;
+  } else {
+    e = 45;
+  }
+
+  Serial.print("{x:");
+  Serial.print(x);
+  Serial.print(",y:");
+  Serial.print(y);
+  Serial.print(",l:");
+  Serial.print(l);
+  Serial.print(",m:");
+  Serial.print(m);
+  Serial.print(",r:");
+  Serial.print(r);
+  Serial.print(",a:");
+  Serial.print(a);
+  Serial.print(",b:");
+  Serial.print(b);
+  Serial.print(",c:");
+  Serial.print(c);
+  Serial.print(",d:");
+  Serial.print(d);
+  Serial.print(",e:");
+  Serial.print(e);
+  Serial.println("}");
 }
 
 int rad2deg(double rad) {
@@ -123,11 +139,11 @@ void readCommands() {
       case 'c':
       case 'd':
       case 'e':
-      case 'w':
       case 'x':
       case 'y':
-      case 'z':
-      case 'g':
+      case 'l':
+      case 'm':
+      case 'r':
         // these commands are followed by an int
         val = (double)Serial.parseInt();
         // remember the command
@@ -138,20 +154,20 @@ void readCommands() {
       case '\n':
         // execute the command when terminated with ;
         switch (cmd) {
-          case 'w':
-            w = val;
-            break;
           case 'x':
             x = val;
             break;
           case 'y':
             y = val;
             break;
-          case 'z':
-            z = val;
+          case 'l':
+            l = val;
             break;
-          case 'g':
-            e = (val);
+          case 'm':
+            m = (val);
+            break;
+          case 'r':
+            r = (val);
             break;
         }
         setArm();
