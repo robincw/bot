@@ -3,39 +3,32 @@
 Servo servos[5];
 int pins[5];
 int offsets[5];
-double w,x,y,z;
-double a,b,c,d,e;
-const double B = 60;
-const double C = 65;
+int w,x,y;
+int l,m,r;
+int a = 90;
+int b = 2;
+int c = 0;
+int z = 180;
+int d = 90;
+int e = 45;
 
 void setup() {
-  x=55;
-  y=0;
-  z=40;
   while(!Serial);
   Serial.begin(9600);
   Serial.println("Gripr");
   Serial.println("Commands: x,y,z,w,g followed by int, ended by ; or space or newline");
-  initServos();
   pins[0]=3;
   pins[1]=5;
   pins[2]=6;
   pins[3]=11;
   pins[4]=9;
   offsets[0]=0;
-  offsets[1]=-16;
+  offsets[1]=0;
   offsets[2]=30;
   offsets[3]=0;
   offsets[4]=5;
   for(int s=0; s<5; s++) {
     servos[s].attach(pins[s]);
-  }
-  
-  for(double j=-100; j<100; j++) {
-    x=j;y=50;z=40;
-    moveArm();
-    setArm();
-    delay(50);
   }
 }
 
@@ -52,27 +45,27 @@ void moveArm() {
   grip(e);
 }
 void setArm() {
-  a = a + x;
-  
-  b = b + y;
-  
   if(m == 1) {
-    c = c + y;
-  } else {
-    c = c + (180 - b);
-  }
-  
-  if(r == 1) {
     w = w + x;
+  } else {    
+    if(r == 1) {
+      z = max(0, min(z + y, 180));
+    } else {
+      b = max(2, min(b - y, 130));
+    }
+    a = max(0, min(a + x, 180));
+    c = max(0, min((180 - b) -z, 180));
   }
-  d = w + (180 - a);
+  if(b + c > 100) {
+    d = max(0, min(w + (180 - a), 180));
+  }
   
   if(l == 1) {
     e = 0;
   } else {
     e = 45;
   }
-
+/*
   Serial.print("{x:");
   Serial.print(x);
   Serial.print(",y:");
@@ -94,42 +87,37 @@ void setArm() {
   Serial.print(",e:");
   Serial.print(e);
   Serial.println("}");
+*/
 }
 
-int rad2deg(double rad) {
+int rad2deg(int rad) {
   return (rad * 4068) / 71;
 }
-void initServos() {
-  a=(90);
-  b=(0);
-  c=(0);
-  d=(90);
-  e=(45);
-}
 
-void base(double deg) {
+void base(int deg) {
   mov(0, 180-deg);
 }
-void shoulder(double deg) {
+void shoulder(int deg) {
   mov(1, deg);
 }
-void elbow(double deg) {
+void elbow(int deg) {
   mov(2, deg);
 }
-void wrist(double deg) {
+void wrist(int deg) {
   mov(3, deg);
 }
-void grip(double deg) {
+void grip(int deg) {
   mov(4, deg);
 }
-void mov(int s, double deg) {
+void mov(int s, int deg) {
   servos[s].write(deg+offsets[s]);
+  delay(2);
 }
 
 void readCommands() {
   char inByte = ' ';
   char cmd = 's';
-  double  val = 0;
+  int  val = 0;
   while(Serial.available() > 0) {
     // read the incoming byte:
     inByte = Serial.read();
@@ -139,13 +127,15 @@ void readCommands() {
       case 'c':
       case 'd':
       case 'e':
+      
       case 'x':
       case 'y':
+      case 'z':
       case 'l':
       case 'm':
       case 'r':
         // these commands are followed by an int
-        val = (double)Serial.parseInt();
+        val = Serial.parseInt();
         // remember the command
         cmd = inByte;
         break;
@@ -155,10 +145,13 @@ void readCommands() {
         // execute the command when terminated with ;
         switch (cmd) {
           case 'x':
-            x = val;
+            x = max(-1, min(val, 1));
             break;
           case 'y':
-            y = val;
+            y = max(-1, min(val, 1));
+            break;
+          case 'z':
+            z = val;
             break;
           case 'l':
             l = val;
